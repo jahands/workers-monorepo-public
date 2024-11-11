@@ -1,0 +1,13 @@
+{
+	"name": "@repo/docker-rclone",
+	"version": "0.1.9",
+	"private": true,
+	"dependencies": {
+		"@repo/docker-debian": "workspace:*"
+	},
+	"devDependencies": {
+		"@repo/eslint-config": "workspace:*",
+		"@repo/tools": "workspace:*",
+		"@repo/typescript-config": "workspace:*"
+	}
+}

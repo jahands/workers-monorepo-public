@@ -1,0 +1,53 @@
+{
+	"name": "workers-monorepo",
+	"version": "1.0.0",
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"changeset:new": "run-changeset-new",
+		"build:packages": "pnpm -F @wci/cli -F @wci/common build",
+		"check:ci": "turbo check:ci --log-order=grouped",
+		"test:ci": "run-vitest-ci",
+		"check:deps": "pnpm syncpack lint",
+		"check:format": "prettier . --check --cache --ignore-unknown",
+		"chore:update:deps": "run-update-deps",
+		"chore:update:tools": "run-s chore:update:tools:* fix:deps",
+		"chore:update:tools:pnpm": "runx update-pnpm",
+		"chore:update:tools:turbo": "pnpx @turbo/codemod@latest update",
+		"fix": "run-s fix:*",
+		"fix:deps": "run-fix-deps",
+		"fix:lint": "FIX_ESLINT=1 pnpm turbo check:lint",
+		"fix:format": "prettier . --write --cache --ignore-unknown"
+	},
+	"devDependencies": {
+		"@changesets/cli": "2.27.9",
+		"@ianvs/prettier-plugin-sort-imports": "4.3.1",
+		"@repo/eslint-config": "workspace:*",
+		"@repo/tools": "workspace:*",
+		"@repo/typescript-config": "workspace:*",
+		"@sentry/cli": "2.38.1",
+		"@turbo/gen": "2.2.3",
+		"@vitest/ui": "2.1.1",
+		"change-case": "5.4.4",
+		"npm-run-all2": "7.0.1",
+		"prettier": "3.3.3",
+		"prettier-plugin-astro": "0.14.1",
+		"prettier-plugin-packagejson": "2.5.3",
+		"slugify": "1.6.6",
+		"syncpack": "13.0.0",
+		"tsx": "4.19.2",
+		"turbo": "2.2.3",
+		"typescript": "5.5.4",
+		"vitest": "2.1.1",
+		"wrangler": "3.84.1",
+		"yaml": "2.6.0",
+		"zod": "3.23.8",
+		"zx": "8.2.0"
+	},
+	"packageManager": "pnpm@9.12.3",
+	"pnpm": {
+		"overrides": {
+			"@types/node": "20.8.3"
+		}
+	}
+}

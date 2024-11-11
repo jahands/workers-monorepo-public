@@ -1,0 +1,28 @@
+name: Branches
+
+on:
+  push:
+    branches-ignore: ['main']
+
+env:
+  EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
+  EARTHLY_ORG: jahands
+  EARTHLY_SATELLITE: mini-sat
+  FORCE_COLOR: 1
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
+      cancel-in-progress: true
+    steps:
+      - uses: earthly/actions-setup@v1.0.13
+        with:
+          version: v0.8.15
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - name: Build
+        run: earthly --ci +build --GITHUB_ACTIONS=1

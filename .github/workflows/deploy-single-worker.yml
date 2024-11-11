@@ -1,0 +1,35 @@
+name: Manual Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: Worker to deploy
+        required: true
+        type: choice
+        options:
+          - apps/d1-id
+          - apps/echoback
+          - apps/pymirror
+          - apps/r2-event-notifs
+          - apps/turbo-cache
+          - apps/workflows-example
+
+env:
+  EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
+  EARTHLY_ORG: jahands
+  EARTHLY_SATELLITE: mini-sat
+  FORCE_COLOR: 1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency: ${{ github.workflow }}-${{ github.event.inputs.worker }}
+    steps:
+      - uses: earthly/actions-setup@v1.0.13
+        with:
+          version: v0.8.15
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: earthly --ci --push +deploy --GITHUB_ACTIONS=1 --APP_NAME=${{
+          github.event.inputs.worker }}

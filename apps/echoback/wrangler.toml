@@ -1,0 +1,20 @@
+name = "echoback"
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["echoback.uuid.rocks/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "off"
+
+[vars]
+NAME = "echoback"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"

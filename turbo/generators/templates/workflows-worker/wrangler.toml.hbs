@@ -1,0 +1,33 @@
+name = "{{ slug name }}"
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["{{ slug name }}.workflows.uuid.rocks/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "off"
+
+[vars]
+NAME = "{{ slug name }}"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "fe6a0b61900b40318b9e1947ad88a790" # "workflows" - shared across Workflows
+
+# ===================== #
+# ===== Workflows ===== #
+# ===================== #
+
+[[workflows]]
+name = "{{ pascal workflowName }}"
+binding = "{{ pascal workflowName }}"
+class_name = "{{ pascal workflowName }}"

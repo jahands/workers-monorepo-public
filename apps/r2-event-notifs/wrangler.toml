@@ -1,0 +1,27 @@
+name = "r2-event-notifs"
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = []
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "off"
+
+[vars]
+NAME = "r2-event-notifs"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+
+[[queues.consumers]]
+queue = "r2-event-notifs-queue"
+max_batch_size = 100
+max_batch_timeout = 30
+max_retries = 1         # Don't care that much
+max_concurrency = 1     # Concurrency probably won't help us

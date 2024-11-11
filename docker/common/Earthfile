@@ -1,0 +1,13 @@
+VERSION --raw-output 0.8
+PROJECT jahands/docker
+
+# Get a docker version from package.json
+version:
+	FROM ../..+setup-project
+	COPY --dir ../..+git-repo/.git .
+	ARG --required package
+	RUN test -d "/work/$package"
+	WORKDIR "/work/$package"
+	ENV PATH="/work/packages/tools/bin:$PATH"
+	RUN get-docker-version > ./VERSION
+	SAVE ARTIFACT ./VERSION

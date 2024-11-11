@@ -1,0 +1,7 @@
+.changeset
+pnpm-lock.yaml
+/turbo/generators/**/*.hbs
+**/drizzle/meta/**/*.json
+**/migrations/**/*.sql
+/apps/email-scm-dash/build/
+*.bun-build

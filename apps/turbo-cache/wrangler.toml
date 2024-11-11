@@ -1,0 +1,37 @@
+name = "turbo-cache"
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["turbo.uuid.rocks/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "smart"
+
+[vars]
+NAME = "turbo-cache"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+# UPSTASH_REDIS_REST_TOKEN is in secrets
+UPSTASH_REDIS_REST_URL = "https://redis-mini.uuid.rocks"
+
+[[r2_buckets]]
+binding = 'R2'
+bucket_name = 'turbo-cache'
+
+[[kv_namespaces]]
+id = "cf4ae286c0554698bac40d81d2395110"
+binding = "KV"
+
+[durable_objects]
+bindings = [{ name = "TURBOCACHE", class_name = "TurboCache" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TurboCache"] # Array of new classes

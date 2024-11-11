@@ -1,0 +1,10 @@
+{
+	"name": "@repo/docker-restic-backup",
+	"version": "0.2.4",
+	"private": true,
+	"devDependencies": {
+		"@repo/eslint-config": "workspace:*",
+		"@repo/tools": "workspace:*",
+		"@repo/typescript-config": "workspace:*"
+	}
+}

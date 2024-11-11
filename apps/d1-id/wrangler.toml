@@ -1,0 +1,25 @@
+name = "d1-id"
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["id.uuid.rocks/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "smart"
+
+[vars]
+NAME = "d1-id"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+
+[[d1_databases]]
+binding = "D1"
+database_name = "ids-fast"
+database_id = "ac85e7be-6beb-4bb2-be2f-b431be12ed40"

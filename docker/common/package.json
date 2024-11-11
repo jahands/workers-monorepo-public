@@ -1,0 +1,10 @@
+{
+	"name": "@repo/docker-common",
+	"version": "0.1.0",
+	"private": true,
+	"devDependencies": {
+		"@repo/eslint-config": "workspace:*",
+		"@repo/tools": "workspace:*",
+		"@repo/typescript-config": "workspace:*"
+	}
+}

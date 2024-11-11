@@ -1,0 +1,3 @@
+[defaults]
+url = https://sentry.uuid.rocks
+org = sentry

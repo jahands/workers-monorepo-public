@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    branches: ['main']
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+  test-and-deploy:
+    name: Test and Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: workers-monorepo-deploy
+    env:
+      EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
+      EARTHLY_ORG: jahands
+      EARTHLY_SATELLITE: mini-sat
+    steps:
+      - uses: earthly/actions-setup@v1.0.13
+        with:
+          version: v0.8.15
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - name: Deploy
+        run: earthly --ci --push +deploy --GITHUB_ACTIONS=1
+
+  create-release-pr:
+    # For Workers, we always deploy on commits to main.
+    # For NPM packages and Docker images, we publish only
+    # when changesets version the package.
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency: ${{ github.workflow }}-create-release-pr
+    env:
+      GITEA_NPM_TOKEN: ${{ secrets.GITEA_NPM_TOKEN }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: |
+          pnpm install --frozen-lockfile --child-concurrency=10 \
+            -F @wci/cli -F @wci/common
+      - name: Creating .npmrc
+        run: |
+          cat << EOF > "$HOME/.npmrc"
+            @wci:registry=https://gitea.uuid.rocks/api/packages/jh/npm/
+            //gitea.uuid.rocks/api/packages/jh/npm/:_authToken="${GITEA_NPM_TOKEN}"
+          EOF
+      - name: Build Packages
+        run: pnpm turbo -F @wci/cli -F @wci/common build
+      - name: Create Release Pull Request or Publish to npm
+        uses: changesets/action@v1
+        with:
+          publish: pnpm changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

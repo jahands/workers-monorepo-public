@@ -1,0 +1,44 @@
+VERSION 0.8
+PROJECT jahands/docker
+
+compile:
+	FROM caddy:2.8.4-builder
+	ARG --required variant
+	WORKDIR /work
+
+	CACHE $(go env GOCACHE)
+
+	COPY build.sh .
+	RUN ./build.sh $variant
+	SAVE ARTIFACT /work/caddy
+
+build-caddy:
+	FROM alpine:3.20
+	WORKDIR /work
+	ARG --required variant
+	COPY (../common+version/VERSION --package=docker/caddy) .
+	LET docker_tag=$(cat ./VERSION)
+
+	COPY +compile/caddy /usr/bin/caddy
+
+	VOLUME /config
+	VOLUME /data
+
+	EXPOSE 80
+	EXPOSE 443
+	EXPOSE 2019
+
+	WORKDIR /srv
+	CMD ["caddy", "run", "--config", "/etc/caddy/caddy.json"]
+
+	IF [ -z "$docker_tag" ]
+		# SAVE IMAGE --push gitea.uuid.rocks/geobox/caddy:$variant-nightly
+	ELSE
+		SAVE IMAGE --push gitea.uuid.rocks/geobox/caddy:$variant-$docker_tag \
+											gitea.uuid.rocks/geobox/caddy:$variant # latest
+	END
+
+build:
+	BUILD +build-caddy \
+		--variant=latest \
+		--variant=dockerproxy

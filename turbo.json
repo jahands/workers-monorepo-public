@@ -1,0 +1,119 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"globalDependencies": ["**/.env.*local", "**/.dev.vars"],
+	"globalEnv": [
+		"CI",
+		"GITHUB_ACTIONS",
+		"ALLOW_DUPES",
+		"CF_ACCESS_CLIENT_ID",
+		"CF_ACCESS_CLIENT_SECRET",
+		"ASTROBLOG_GHOST_API_URL",
+		"ASTROBLOG_GHOST_CONTENT_API_KEY",
+		"SENTRY_AUTH_TOKEN",
+		"CLOUDFLARE_API_TOKEN",
+		"CLOUDFLARE_ACCOUNT_ID",
+		"AWS_ACCESS_KEY_ID",
+		"AWS_SECRET_ACCESS_KEY",
+		"AXIOM_TOKEN",
+		"AXIOM_ORG_ID",
+		"AXIOM_DATASET",
+		"VITEST",
+		"FORCE_COLOR",
+		"NODE_ENV"
+	],
+	"globalPassThroughEnv": ["DEV", "SENTRY_RELEASE"],
+	"remoteCache": {
+		"enabled": true,
+		"signature": true
+	},
+	"ui": "stream",
+	"tasks": {
+		"build:nocache": {
+			"outputLogs": "new-only",
+			"cache": false
+		},
+		"build": {
+			"dependsOn": ["^build", "build:nocache", "^build:nocache"],
+			"outputs": ["dist/**", ".astro/**"],
+			"outputLogs": "new-only"
+		},
+		"build:wrangler": {
+			"dependsOn": ["build"],
+			"outputs": ["dist/**", ".astro/**", "build/**"],
+			"outputLogs": "new-only"
+		},
+		"check": {
+			"dependsOn": ["build", "^check:types", "^check:lint", "check:types", "check:lint"],
+			"outputLogs": "new-only"
+		},
+		"test": {
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
+		},
+		"//#test:ci": {
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
+		},
+		"test:ci": {
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
+		},
+		"check:ci": {
+			"dependsOn": [
+				"//#check:format",
+				"//#check:deps",
+				"check:types",
+				"check:lint",
+				"//#test:ci",
+				"test:ci"
+			],
+			"outputLogs": "new-only"
+		},
+		"//#check:deps": {
+			"outputLogs": "new-only"
+		},
+		"check:types": {
+			"dependsOn": ["build", "^check:types"],
+			"outputLogs": "new-only"
+		},
+		"check:lint": {
+			"dependsOn": ["build", "^check:lint"],
+			"outputLogs": "new-only",
+			"passThroughEnv": ["FIX_ESLINT"]
+		},
+		"//#check:format": {
+			"outputLogs": "new-only"
+		},
+		"deploy": {
+			"dependsOn": ["deploy:wrangler", "sentry:finalize"],
+			"outputLogs": "new-only"
+		},
+		"deploy:wrangler": {
+			"dependsOn": ["^build", "build"],
+			"outputs": ["dist/**", ".astro/**", "build/**"],
+			"outputLogs": "new-only"
+		},
+		"sentry:sourcemaps": {
+			"dependsOn": ["deploy:wrangler"],
+			"outputLogs": "new-only"
+		},
+		"sentry:commits": {
+			"dependsOn": ["sentry:sourcemaps"],
+			"outputLogs": "new-only"
+		},
+		"sentry:finalize": {
+			"dependsOn": ["sentry:commits"],
+			"outputLogs": "new-only"
+		},
+		"//#format": {
+			"outputLogs": "new-only"
+		},
+		"//#build:packages": {
+			"cache": false,
+			"outputLogs": "new-only"
+		},
+		"//#build": {
+			"outputLogs": "new-only"
+		}
+	}
+}

@@ -1,0 +1,38 @@
+{
+	"folders": [
+		{
+			"name": "Workers",
+			"path": ".",
+		},
+		{
+			"name": "Packages",
+			"path": "packages",
+		},
+	],
+	"settings": {
+		"files.exclude": {
+			"packages/": true,
+		},
+
+		"[jsonc]": {
+			"editor.formatOnSave": true,
+		},
+
+		"github-actions.workflows.pinned.workflows": [".github/workflows/release.yml"],
+		"github-actions.workflows.pinned.refresh.enabled": true,
+		"files.associations": {
+			"**/packages/tools/bin/*": "shellscript",
+		},
+
+		// icons: https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
+		"VsCodeTaskButtons.showCounter": false,
+		"VsCodeTaskButtons.tasks": [
+			{
+				"label": "$(git-commit) New Commit",
+				"task": "changeset: new",
+				"tooltip": "Create changeset and commit all changes",
+			},
+		],
+		"cSpell.words": ["runx"],
+	},
+}

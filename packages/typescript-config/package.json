@@ -1,0 +1,13 @@
+{
+	"name": "@repo/typescript-config",
+	"version": "0.1.8",
+	"private": true,
+	"license": "MIT",
+	"sideEffects": false,
+	"devDependencies": {
+		"vitest": "2.1.1"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

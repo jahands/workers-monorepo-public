@@ -1,0 +1,9 @@
+{
+	"extends": "@repo/typescript-config/workers.json",
+	"include": ["**/*.ts", "**/*.tsx"],
+	"exclude": ["node_modules", "tsconfig.json"],
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx"
+	}
+}
