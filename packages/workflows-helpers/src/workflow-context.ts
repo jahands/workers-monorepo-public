@@ -122,16 +122,17 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 				)
 				this.sentry.captureException(e)
 			} else {
-				// Go ahead and record them for now
-				// this.sentry.withScope((scope) => {
-				// 	scope.setContext('Workflows Debug', {
-				// 		note: 'this should already have been recorded in c.run()',
-				// 	})
-				// 	scope.setTags({
-				// 		debug: true,
-				// 	})
-				// 	this.sentry.captureException(e)
-				// })
+				// Go ahead and record them for now so that we know where
+				// step.do() was called from.
+				this.sentry.withScope((scope) => {
+					scope.setContext('Workflows Debug', {
+						note: 'this should already have been recorded in c.run()',
+					})
+					scope.setTags({
+						debug: true,
+					})
+					this.sentry.captureException(e)
+				})
 			}
 
 			throw e
