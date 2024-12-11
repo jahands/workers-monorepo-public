@@ -24,7 +24,7 @@ const retryOpts: RetryOptions = {
 const app = new Hono<App>()
 	.use(
 		'*',
-		// add some metadata used in trac
+		// add some metadata used in traces
 		useMeta,
 		useDefaultCors(),
 		useSentry(initSentry, 'http.server'),
