@@ -219,7 +219,9 @@ class WorkflowContextStep<
 					retries: 3,
 					randomize: true,
 					shouldRetry: (e) => {
+						// Only retry errors that appear to be internal Workflows errors
 						if (
+							// Workflows is built on Durable Objects, which sometimes throws this error
 							e.message
 								.toLowerCase()
 								.startsWith('durable object reset because its code was updated')
