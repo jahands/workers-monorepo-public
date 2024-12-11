@@ -1,0 +1,34 @@
+name = "notion-workflows"
+account_id = "696e9b7cf58566f1cbe3eaab2b927012" # alt
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["notion.workflows.uuids.dev/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "off"
+
+[vars]
+NAME = "notion-workflows"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "35c12d65a4034edd8e407a5136aa1943" # workflows
+
+# ===================== #
+# ===== Workflows ===== #
+# ===================== #
+
+[[workflows]]
+name = "Notion_AddPageIcon"
+binding = "AddPageIcon"
+class_name = "AddPageIcon"

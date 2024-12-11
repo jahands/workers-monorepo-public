@@ -29,7 +29,7 @@ export class {{ pascal workflowName }} extends WorkflowEntrypoint<Bindings, {{ p
 async function handle{{ pascal workflowName }}(c: WorkflowContext, params: {{ pascal workflowName }}Params): Promise<void> {
 	c.logger.info(`params: ${JSON.stringify(params)}`, { msc: { params } })
 
-	const uuid = await c.do('get a uuid', async () => {
+	const uuid = await c.step.do('get a uuid', async () => {
 		const res = await fetch('https://uuid.rocks/plain')
 		if (!res.ok) {
 			throw new Error('failed to fetch uuid')

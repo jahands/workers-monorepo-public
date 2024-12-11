@@ -49,12 +49,15 @@ export const ApiToken = z.string().min(1)
 export type ApiTokens = z.infer<typeof ApiTokens>
 export const ApiTokens = z
 	.object({
-		// ==== shared ==== //
 		/** Shared read/write token to use as default */
 		admin_rw: ApiToken,
 
-		// ==== apps/workflows ==== //
+		/** ==== apps/workflows ==== */
 		pages_deployment_cleaner_rw: ApiToken,
+
+		/** ==== apps/notion-workflows ==== */
+		notion_rw: ApiToken,
+		notion_hooks_w: ApiToken,
 	})
 	// Partial because updating each worker is a manual process for now
 	.partial()

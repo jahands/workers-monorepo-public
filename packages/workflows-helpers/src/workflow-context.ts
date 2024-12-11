@@ -34,27 +34,45 @@ const defaultStepConfig = {
 	timeout: '10 minutes',
 } satisfies WorkflowStepConfig
 
-/** Workflow context (similar to Hono context) */
-export class WorkflowContext<Bindings extends SharedHonoBindings, Params = unknown> {
+export interface WorkflowContextOptions<Bindings extends SharedHonoBindings, Params = unknown> {
+	ctx: ExecutionContext
+	env: Bindings
+	event: WorkflowEvent<Params>
+	step: WorkflowStep
+	/** Name of the Workflow (e.g. NewEmailWorkflow) */
+	workflow: string
+}
+
+export function isNonRetryableError(err: unknown): err is NonRetryableError {
+	return (
+		// When reading the error across RPC boundaries, instanceof will never
+		// return true. But I included it here just in case we use these elsewhere.
+		err instanceof NonRetryableError ||
+		(err instanceof Error && err.message.startsWith('NonRetryableError:'))
+	)
+}
+
+export function isStepFailedError(err: unknown): err is StepFailedError {
+	return (
+		err instanceof StepFailedError ||
+		(err instanceof Error && err.message.startsWith('StepFailedError:'))
+	)
+}
+
+class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown> {
 	readonly ctx: ExecutionContext
 	readonly env: Bindings
 	readonly event: WorkflowEvent<Params>
-	readonly step: WorkflowStep
+	/** Original WorkflowStep - prefer using step instead. */
+	readonly _step: WorkflowStep
 	readonly logger: AxiomLogger
 	readonly sentry: Toucan
 
-	constructor(c: {
-		ctx: ExecutionContext
-		env: Bindings
-		event: WorkflowEvent<Params>
-		step: WorkflowStep
-		/** Name of the Workflow (e.g. NewEmailWorkflow) */
-		workflow: string
-	}) {
+	constructor(c: WorkflowContextOptions<Bindings, Params>) {
 		this.ctx = c.ctx
 		this.env = c.env
 		this.event = c.event
-		this.step = c.step
+		this._step = c.step
 		this.sentry = initWorkflowSentry(c.env, c.ctx)
 
 		this.logger = new AxiomLogger({
@@ -76,7 +94,7 @@ export class WorkflowContext<Bindings extends SharedHonoBindings, Params = unkno
 
 	/** Runs the callback within a tagged logger context */
 	async withLogger<T>(callback: () => Promise<T>): Promise<T> {
-		return withLogTags(
+		return await withLogTags(
 			{
 				source: this.env.NAME,
 				tags: {
@@ -90,32 +108,52 @@ export class WorkflowContext<Bindings extends SharedHonoBindings, Params = unkno
 
 	/**
 	 * Runs a callback and captures errors as long as they are not
-	 * already recorded within c.do()
+	 * already recorded within c.step.do()
 	 * @param callback The function to run and record errors from
 	 */
 	async run(callback: () => Promise<void>): Promise<void> {
 		try {
 			await this.withLogger(callback)
 		} catch (e) {
-			// These errors already get captured within c.do()
-			if (!(e instanceof StepFailedError) && !(e instanceof NonRetryableError)) {
+			// These errors already get captured within c.step.do()
+			if (!isNonRetryableError(e) && !isStepFailedError(e)) {
+				this.logger.warn(
+					`not a StepFailedError or NonRetryableError: ${e instanceof Error ? e.name + ': ' + e.message : ''}`
+				)
 				this.sentry.captureException(e)
 			} else {
 				// Go ahead and record them for now
-				this.sentry.withScope((scope) => {
-					scope.setContext('Workflows Debug', {
-						note: 'this should already have been recorded in c.run()',
-					})
-					scope.setTags({
-						debug: true,
-					})
-					this.sentry.captureException(e)
-				})
+				// this.sentry.withScope((scope) => {
+				// 	scope.setContext('Workflows Debug', {
+				// 		note: 'this should already have been recorded in c.run()',
+				// 	})
+				// 	scope.setTags({
+				// 		debug: true,
+				// 	})
+				// 	this.sentry.captureException(e)
+				// })
 			}
+
 			throw e
 		} finally {
 			await this.logger.flushAndStop()
 		}
+	}
+}
+
+/** Workflow context (similar to Hono context) */
+class WorkflowContextStep<
+	Bindings extends SharedHonoBindings,
+	Params = unknown,
+> extends WorkflowContextBase<Bindings, Params> {
+	readonly sleep
+	readonly sleepUntil
+
+	constructor(c: WorkflowContextOptions<Bindings, Params>) {
+		super(c)
+		// Expose the original sleep methods directly
+		this.sleep = c.step.sleep.bind(this)
+		this.sleepUntil = c.step.sleepUntil.bind(this)
 	}
 
 	/**
@@ -163,7 +201,7 @@ export class WorkflowContext<Bindings extends SharedHonoBindings, Params = unkno
 
 			return await pRetry(
 				async () =>
-					this.step.do(name, config, async () => {
+					await this._step.do(name, config, async () => {
 						try {
 							return await cb()
 						} catch (e) {
@@ -193,6 +231,18 @@ export class WorkflowContext<Bindings extends SharedHonoBindings, Params = unkno
 				}
 			)
 		})
+	}
+}
+
+export class WorkflowContext<
+	Bindings extends SharedHonoBindings,
+	Params = unknown,
+> extends WorkflowContextBase<Bindings, Params> {
+	readonly step: WorkflowContextStep<Bindings, Params>
+
+	constructor(c: WorkflowContextOptions<Bindings, Params>) {
+		super(c)
+		this.step = new WorkflowContextStep(c)
 	}
 }
 

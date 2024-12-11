@@ -29,7 +29,7 @@ export class MyWorkflow extends WorkflowEntrypoint<Bindings, MyWorkflowParams> {
 async function handleMyWorkflow(c: WorkflowContext, params: MyWorkflowParams): Promise<void> {
 	c.logger.info(`params: ${JSON.stringify(params)}`, { msc: { params } })
 
-	const uuid = await c.do('get a uuid', async () => {
+	const uuid = await c.step.do('get a uuid', async () => {
 		const res = await fetch('https://uuid.rocks/plain')
 		if (!res.ok) {
 			throw new Error('failed to fetch uuid')
