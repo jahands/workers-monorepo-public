@@ -173,7 +173,7 @@ class WorkflowContextStep<
 		configOrCallback: WorkflowStepConfig | (() => Promise<T>),
 		callback?: () => Promise<T>
 	): Promise<T> {
-		return this.withLogger(async () => {
+		return await this.withLogger(async () => {
 			let config: WorkflowStepConfig
 			let cb: () => Promise<T>
 
