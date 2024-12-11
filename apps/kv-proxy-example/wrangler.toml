@@ -1,0 +1,25 @@
+name = "kv-proxy-example"
+account_id = "f9b1e1e2cf50cca79a58e395b6084239" # main
+main = "src/index.ts"
+compatibility_date = "2024-09-02"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+logpush = true
+routes = ["kv-proxy-example.uuid.rocks/*"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[placement]
+mode = "off"
+
+[vars]
+NAME = "kv-proxy-example"
+ENVIRONMENT = "production"
+AXIOM_DATASET = "workers"
+AXIOM_DATASET_OTEL = "workers-otel"
+
+[[kv_namespaces]]
+binding = 'KV'
+id = 'c5f446fc4fcf4024a0bca6cdcb4921ed'
