@@ -61,9 +61,8 @@ const app = new Hono<App>()
 
 		// Tell clients not to cache it
 		c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
-		const response = c.text(kvRes)
 
-		return response
+		return c.text(kvRes)
 	})
 
 	.put(async (c) => {
