@@ -83,7 +83,7 @@ async function handleAddPageIcon(c: WorkflowContext, params: AddPageIconParams):
 			icon: {
 				type: 'external',
 				external: {
-					url: iconURL, // Next randomized icon from shuffled array
+					url: iconURL,
 				},
 			},
 		})
