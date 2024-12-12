@@ -52,13 +52,6 @@ export function isNonRetryableError(err: unknown): err is NonRetryableError {
 	)
 }
 
-export function isStepFailedError(err: unknown): err is StepFailedError {
-	return (
-		err instanceof StepFailedError ||
-		(err instanceof Error && err.message.startsWith('StepFailedError:'))
-	)
-}
-
 class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown> {
 	readonly ctx: ExecutionContext
 	readonly env: Bindings
@@ -142,26 +135,12 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 
 			await this.withLogger(callback)
 		} catch (e) {
-			// These errors already get captured within c.step.do()
-			if (!isNonRetryableError(e) && !isStepFailedError(e)) {
-				this.logger.warn(
-					`not a StepFailedError or NonRetryableError: ${e instanceof Error ? e.name + ': ' + e.message : ''}`
-				)
-				this.sentry.captureException(e)
-			} else {
-				// Go ahead and record them for now so that we know where
-				// step.do() was called from.
-				this.sentry.withScope((scope) => {
-					scope.setContext('Workflows Debug', {
-						note: 'this should already have been recorded in c.run()',
-					})
-					scope.setTags({
-						debug: true,
-					})
-					this.sentry.captureException(e)
-				})
-			}
-
+			// This may be a duplicate of an error already captured within
+			// step.do(), but we still need to capture it here as well so
+			// that we get a stack trace for where the step was called.
+			// Also may capture errors calling step.do() that Workflows
+			// throws internally.
+			this.sentry.captureException(e)
 			throw e
 		} finally {
 			this.sentry.popScope()
@@ -187,9 +166,6 @@ class WorkflowContextStep<
 
 	/**
 	 * Run a Workflows Step.
-	 *
-	 * Callers should avoid capturing `StepFailedError` and `NonRetryableError`
-	 * because these errors are already captured to Sentry within this method.
 	 */
 	async do<T extends Rpc.Serializable<T>>(name: string, callback: () => Promise<T>): Promise<T>
 	async do<T extends Rpc.Serializable<T>>(
@@ -227,44 +203,49 @@ class WorkflowContextStep<
 			}
 
 			this.logger.info(`running workflow step: ${name}`)
-
-			return await pRetry(
-				async () =>
-					await this._step.do(name, config, async () => {
-						try {
-							this.sentry.pushScope()
-							this.setSentryMetadata()
-							return await cb()
-						} catch (e) {
-							this.sentry.captureException(e)
-							if (e instanceof NonRetryableError) {
+			let didErr = false
+			try {
+				return await pRetry(
+					async () =>
+						await this._step.do(name, config, async () => {
+							try {
+								this.sentry.pushScope()
+								this.setSentryMetadata()
+								return await cb()
+							} catch (e) {
+								// Capture inside the step so that we get a good stack trace.
+								this.sentry.captureException(e)
 								throw e
-							} else {
-								throw new StepFailedError(
-									e instanceof Error ? `${e.name}: ${e.message}` : 'unknown'
-								)
+							} finally {
+								this.sentry.popScope()
 							}
-						} finally {
-							this.sentry.popScope()
-						}
-					}),
-				{
-					retries: 3,
-					randomize: true,
-					shouldRetry: (e) => {
-						// Only retry errors that appear to be internal Workflows errors
-						if (
-							// Workflows is built on Durable Objects, which sometimes throws this error
-							e.message
-								.toLowerCase()
-								.startsWith('durable object reset because its code was updated')
-						) {
-							return true
-						}
-						return false
-					},
+						}),
+					{
+						retries: 3,
+						randomize: true,
+						shouldRetry: (e) => {
+							// Only retry errors that appear to be internal Workflows errors
+							if (
+								// Workflows is built on Durable Objects, which sometimes throws this error
+								e.message
+									.toLowerCase()
+									.startsWith('durable object reset because its code was updated')
+							) {
+								return true
+							}
+							return false
+						},
+					}
+				)
+			} catch (e) {
+				this.logger.error(`workflow step failed: ${name}`)
+				didErr = true
+				throw e
+			} finally {
+				if (!didErr) {
+					this.logger.info(`workflow step succeeded: ${name}`)
 				}
-			)
+			}
 		})
 	}
 }
@@ -280,9 +261,3 @@ export class WorkflowContext<
 		this.step = new WorkflowContextStep(c)
 	}
 }
-
-/**
- * StepFailedError that should be thrown within
- * do() when we don't want to capture to Sentry
- */
-export class StepFailedError extends Error {}
