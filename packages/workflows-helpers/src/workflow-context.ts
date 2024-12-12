@@ -67,6 +67,7 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 	readonly _step: WorkflowStep
 	readonly logger: AxiomLogger
 	readonly sentry: Toucan
+	readonly workflowName: string
 
 	constructor(c: WorkflowContextOptions<Bindings, Params>) {
 		this.ctx = c.ctx
@@ -74,6 +75,7 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 		this.event = c.event
 		this._step = c.step
 		this.sentry = initWorkflowSentry(c.env, c.ctx)
+		this.workflowName = c.workflow
 
 		this.logger = new AxiomLogger({
 			ctx: this.ctx,
@@ -107,12 +109,37 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 	}
 
 	/**
+	 * Adds Sentry tags and adds params as an
+	 * attachment to the current Sentry scope
+	 */
+	setSentryMetadata(): void {
+		this.sentry.setTags({
+			workflow: this.workflowName,
+		})
+		this.sentry.configureScope((scope) => {
+			scope.addAttachment({
+				filename: 'workflow_params.json',
+				data: JSON.stringify(this.event.payload),
+			})
+		})
+	}
+
+	/**
 	 * Runs a callback and captures errors as long as they are not
 	 * already recorded within c.step.do()
 	 * @param callback The function to run and record errors from
 	 */
 	async run(callback: () => Promise<void>): Promise<void> {
 		try {
+			this.sentry.pushScope()
+			this.setSentryMetadata()
+			this.logger.info(
+				`running workflow ${this.workflowName} with params: ${JSON.stringify(this.event.payload)}`,
+				{
+					msc: { params: this.event.payload },
+				}
+			)
+
 			await this.withLogger(callback)
 		} catch (e) {
 			// These errors already get captured within c.step.do()
@@ -137,6 +164,7 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 
 			throw e
 		} finally {
+			this.sentry.popScope()
 			await this.logger.flushAndStop()
 		}
 	}
@@ -204,6 +232,8 @@ class WorkflowContextStep<
 				async () =>
 					await this._step.do(name, config, async () => {
 						try {
+							this.sentry.pushScope()
+							this.setSentryMetadata()
 							return await cb()
 						} catch (e) {
 							this.sentry.captureException(e)
@@ -214,6 +244,8 @@ class WorkflowContextStep<
 									e instanceof Error ? `${e.name}: ${e.message}` : 'unknown'
 								)
 							}
+						} finally {
+							this.sentry.popScope()
 						}
 					}),
 				{
