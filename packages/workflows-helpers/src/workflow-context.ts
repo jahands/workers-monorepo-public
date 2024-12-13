@@ -123,29 +123,31 @@ class WorkflowContextBase<Bindings extends SharedHonoBindings, Params = unknown>
 	 * @param callback The function to run and record errors from
 	 */
 	async run(callback: () => Promise<void>): Promise<void> {
-		try {
-			this.sentry.pushScope()
-			this.setSentryMetadata()
-			this.logger.info(
-				`running workflow ${this.workflowName} with params: ${JSON.stringify(this.event.payload)}`,
-				{
-					msc: { params: this.event.payload },
-				}
-			)
+		await this.withLogger(async () => {
+			try {
+				this.sentry.pushScope()
+				this.setSentryMetadata()
+				this.logger.info(
+					`running workflow ${this.workflowName} with params: ${JSON.stringify(this.event.payload)}`,
+					{
+						msc: { params: this.event.payload },
+					}
+				)
 
-			await this.withLogger(callback)
-		} catch (e) {
-			// This may be a duplicate of an error already captured within
-			// step.do(), but we still need to capture it here as well so
-			// that we get a stack trace for where the step was called.
-			// Also may capture errors calling step.do() that Workflows
-			// throws internally.
-			this.sentry.captureException(e)
-			throw e
-		} finally {
-			this.sentry.popScope()
-			await this.logger.flushAndStop()
-		}
+				await callback()
+			} catch (e) {
+				// This may be a duplicate of an error already captured within
+				// step.do(), but we still need to capture it here as well so
+				// that we get a stack trace for where the step was called.
+				// Also may capture errors calling step.do() that Workflows
+				// throws internally.
+				this.sentry.captureException(e)
+				throw e
+			} finally {
+				this.sentry.popScope()
+				await this.logger.flushAndStop()
+			}
+		})
 	}
 }
 
