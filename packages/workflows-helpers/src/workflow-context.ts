@@ -237,6 +237,9 @@ class WorkflowContextStep<
 							}
 							return false
 						},
+						onFailedAttempt: (e) => {
+							this.sentry.captureException(e)
+						},
 					}
 				)
 			} catch (e) {
