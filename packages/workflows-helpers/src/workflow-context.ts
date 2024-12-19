@@ -162,8 +162,8 @@ class WorkflowContextStep<
 	constructor(c: WorkflowContextOptions<Bindings, Params>) {
 		super(c)
 		// Expose the original sleep methods directly
-		this.sleep = c.step.sleep.bind(this)
-		this.sleepUntil = c.step.sleepUntil.bind(this)
+		this.sleep = c.step.sleep.bind(c.step)
+		this.sleepUntil = c.step.sleepUntil.bind(c.step)
 	}
 
 	/**
