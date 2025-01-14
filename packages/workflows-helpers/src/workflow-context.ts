@@ -212,6 +212,9 @@ class WorkflowContextStep<
 						await this._step.do(name, config, async () => {
 							try {
 								this.sentry.pushScope()
+								this.sentry.setTags({
+									workflowStep: name,
+								})
 								this.setSentryMetadata()
 								return await cb()
 							} catch (e) {
