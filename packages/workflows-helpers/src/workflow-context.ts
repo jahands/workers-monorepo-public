@@ -8,7 +8,9 @@ import { AxiomLogger } from '@repo/logging'
 import { initWorkflowSentry } from './sentry'
 
 import type { WorkflowEvent, WorkflowStep, WorkflowStepConfig } from 'cloudflare:workers'
+import type { FailedAttemptError } from 'p-retry'
 import type { Toucan } from 'toucan-js'
+import type { z, ZodSchema } from 'zod'
 import type { SharedHonoBindings } from '@repo/hono-helpers/src/types'
 
 /**
@@ -228,23 +230,105 @@ class WorkflowContextStep<
 					{
 						retries: 3,
 						randomize: true,
-						shouldRetry: (e) => {
-							// Only retry errors that appear to be internal Workflows errors
-							if (
-								// Workflows is built on Durable Objects, which sometimes throws this error
-								e.message
-									.toLowerCase()
-									.startsWith('durable object reset because its code was updated')
-							) {
-								return true
-							}
-							return false
-						},
+						shouldRetry: shouldRetryStepDo,
 						onFailedAttempt: (e) => {
 							this.sentry.captureException(e)
 						},
 					}
 				)
+			} catch (e) {
+				this.logger.error(`workflow step failed: ${name}`)
+				didErr = true
+				throw e
+			} finally {
+				if (!didErr) {
+					this.logger.info(`workflow step succeeded: ${name}`)
+				}
+			}
+		})
+	}
+
+	async doZod<T extends ZodSchema>(
+		name: string,
+		schema: T,
+		callback: () => Promise<z.infer<T>>
+	): Promise<z.infer<T>>
+	async doZod<T extends ZodSchema>(
+		name: string,
+		schema: T,
+		config: WorkflowStepConfig,
+		callback: () => Promise<z.infer<T>>
+	): Promise<T>
+	async doZod<T extends z.ZodSchema>(
+		name: string,
+		schema: T,
+		configOrCallback: WorkflowStepConfig | (() => Promise<z.infer<T>>),
+		callback?: () => Promise<z.infer<T>>
+	): Promise<z.infer<T>> {
+		return await this.withLogger(async () => {
+			let config: WorkflowStepConfig
+			let cb: () => Promise<z.infer<T>>
+
+			if (typeof configOrCallback === 'function') {
+				cb = configOrCallback
+				config = defaultStepConfig
+			} else {
+				if (!callback) {
+					throw new Error('missing callback')
+				}
+
+				config = {
+					...defaultStepConfig,
+					...configOrCallback,
+					retries: {
+						...defaultStepConfig.retries,
+						...configOrCallback.retries,
+					},
+				}
+
+				cb = callback
+			}
+
+			this.logger.info(`running workflow step: ${name}`)
+			let didErr = false
+			try {
+				const res = await pRetry(
+					async () =>
+						await this._step.do(name, config, async () => {
+							try {
+								this.sentry.pushScope()
+								this.sentry.setTags({
+									workflowStep: name,
+								})
+								this.setSentryMetadata()
+								const r = await cb()
+								if (r === undefined) {
+									return undefined
+								} else {
+									return JSON.stringify(r)
+								}
+							} catch (e) {
+								// Capture inside the step so that we get a good stack trace.
+								this.sentry.captureException(e)
+								throw e
+							} finally {
+								this.sentry.popScope()
+							}
+						}),
+					{
+						retries: 3,
+						randomize: true,
+						shouldRetry: shouldRetryStepDo,
+						onFailedAttempt: (e) => {
+							this.sentry.captureException(e)
+						},
+					}
+				)
+				if (res === undefined) {
+					return undefined
+				} else {
+					return schema.parse(JSON.parse(res))
+				}
 			} catch (e) {
 				this.logger.error(`workflow step failed: ${name}`)
 				didErr = true
@@ -268,4 +352,15 @@ export class WorkflowContext<
 		super(c)
 		this.step = new WorkflowContextStep(c)
 	}
+}
+
+function shouldRetryStepDo(e: FailedAttemptError): boolean {
+	// Only retry errors that appear to be internal Workflows errors
+	if (
+		// Workflows is built on Durable Objects, which sometimes throws this error
+		e.message.toLowerCase().startsWith('durable object reset because its code was updated')
+	) {
+		return true
+	}
+	return false
 }
