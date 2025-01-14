@@ -2,7 +2,7 @@ VERSION --raw-output 0.8
 PROJECT jahands/docker
 
 setup-workspace:
-	FROM node:22-bookworm-slim
+	FROM debian:12-slim
 	WORKDIR /work
 	RUN apt-get update \
 		&& apt-get install -y curl jq git unzip \
